@@ -1,63 +1,21 @@
 
-#
-# Defines the part type that this project uses.
-#
-PART=LM4F120H5QR
+PROGRAMMER=arduino
+PROGRAMMER_BAUDRATE=115200
+CLOCK=16000000
+MCU=atmega328p
+PORT=/dev/ttyACM0
 
-#
-# Set the processor variant.
-#
-VARIANT=cm4f
+all: objects
 
-#
-# The base directory for StellarisWare.
-#
-ROOT=../stellaris
 
-#
-# Include the common make definitions.
-#
-include ${ROOT}/makedefs
+objects: main.c
+	avr-gcc -Wall -fshort-enums -fno-inline-small-functions -fpack-struct -Wall -fno-strict-aliasing -funsigned-char -funsigned-bitfields -ffunction-sections -mmcu=${MCU} -DF_CPU=${CLOCK} -std=gnu99 -Os -o main.elf -Wl,--gc-sections,--relax -I . -I../common $^
+	avr-objcopy -O ihex main.elf main.hex
+	avr-size main.elf
 
-#
-# Where to find source files that do not live in this directory.
-#
-VPATH=
-VPATH+=../stellaris/utils
+program: objects
+	tools/reset_arduino.py ${PORT}
+	avrdude -V -c ${PROGRAMMER} -P ${PORT} -b ${PROGRAMMER_BAUDRATE} -U flash:w:main.hex -p ${MCU}
 
-#
-# Where to find header files that do not live in the source directory.
-#
-IPATH=../stellaris
-
-all: ${COMPILER}
-all: ${COMPILER}/main.axf
-
-#
-# The rule to clean out all the build products.
-#
 clean:
-	@rm -rf ${COMPILER} ${wildcard *~}
-
-#
-# The rule to create the target directory.
-#
-${COMPILER}:
-	@mkdir -p ${COMPILER}
-
-${COMPILER}/main.axf: ${COMPILER}/startup_${COMPILER}.o
-${COMPILER}/main.axf: ${COMPILER}/uartstdio.o
-${COMPILER}/main.axf: ${COMPILER}/main.o
-${COMPILER}/main.axf: ${COMPILER}/ustdlib.o
-${COMPILER}/main.axf: ${ROOT}/driverlib/${COMPILER}-cm4f/libdriver-cm4f.a
-${COMPILER}/main.axf: main.ld
-SCATTERgcc_main=main.ld
-ENTRY_main=ResetISR
-CFLAGSgcc=-DTARGET_IS_BLIZZARD_RA1 -DUART_BUFFERED
-
-#
-# Include the automatically generated dependency files.
-#
-ifneq (${MAKECMDGOALS},clean)
--include ${wildcard ${COMPILER}/*.d} __dummy__
-endif
+	rm *.elf main.eep main.lss main.map main.sym main.hex autocode.c config.c *.lst *.o || true
