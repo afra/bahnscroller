@@ -8,7 +8,7 @@ PORT=/dev/ttyACM0
 all: objects
 
 
-objects: main.c
+objects: main.c font.c
 	avr-gcc -Wall -fshort-enums -fno-inline-small-functions -fpack-struct -Wall -fno-strict-aliasing -funsigned-char -funsigned-bitfields -ffunction-sections -mmcu=${MCU} -DF_CPU=${CLOCK} -std=gnu99 -Os -o main.elf -Wl,--gc-sections,--relax -I . -I../common $^
 	avr-objcopy -O ihex main.elf main.hex
 	avr-size main.elf
