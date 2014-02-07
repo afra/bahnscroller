@@ -1,4 +1,5 @@
 #include <avr/pgmspace.h>
+#include "font.h"
      
 /* For space efficiency, this table omits codepoints 0x00 till 0x19 as those
  * are non-printing characters */

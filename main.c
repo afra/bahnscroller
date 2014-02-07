@@ -33,30 +33,30 @@ int main(void) {
 #define MODULE_COUNT	4
 #define ROW_WIDTH		30
 #define ROW_COUNT		7
-	uint32_t frame_buffer[MODULE_COUNT*ROW_COUNT]; /* Addressed row first */
-
-	/* Test code */
-	/*
-	uint8_t state = 0;
-	uint8_t c = 0;
-	*/
+#define FB_WIDTH		(MODULE_COUNT*ROW_WIDTH)
+	uint8_t frame_buffer[FB_WIDTH]; /* Addressed row first */
 
 	char *str = "AFRAAFRAAFRAAFRAAFRAAFRA";
 	/* Render text to frame buffer */
 	uint8_t offset = 0;
-	for(char c=str; c && offset<MODULE_COUNT*ROW_WIDTH; c++){
-		uint8_t a = pgm_read_byte(font+*c);
-		uint8_t b = pgm_read_byte(font+*c+1);
-		uint8_t c = pgm_read_byte(font+*c+2);
-		uint8_t d = pgm_read_byte(font+*c+3);
-		uint8_t e = pgm_read_byte(font+*c+4);
-		for(uint8_t y=0; y<7; y++){
-			frame_buffer[MODULE_COUNT*ROW_WIDTH
+	for(char *c=str; c && offset<FB_WIDTH; c++){
+		for(uint8_t x=0; x<5 && offset+x<FB_WIDTH; x++){
+			uint8_t k = *c - 0x20;
+			if(k > 96)
+				k = 0;
+			frame_buffer[offset+x] = pgm_read_byte((uint8_t*)(font+k) + x);
 		}
+		/* Inter-character space */
+		frame_buffer[offset+5] = 0;
 		offset += 6;
+	}
+	/* Fill the rest of the frame buffer with zeros */
+	for(; offset<FB_WIDTH; offset++){
+		frame_buffer[offset] = 0;
 	}
 
 	uint8_t row = 1;
+	uint8_t row_mask = 1;
 	while(1){
 
 		/* Reset shift registers for good measure */
@@ -65,35 +65,13 @@ int main(void) {
 		INV_MASTER_RESET(1);
 		CLOCK_SLEEP();
 
-		/* Test code */
-		/*
-		c++;
-		if(c > 40){
-			c=0;
-			state++;
-			if(state >= 37)
-				state = 0;
-		}
-		*/
-
 		/* shift out row data */
-		for(uint8_t module=0; module<MODULE_COUNT; module++){
-			uint32_t row_data = frame_buffer[(row-1)*MODULE_COUNT+module];
-			/* Test code */
-			/*
-			if(state < 30)
-				row_data = (uint32_t)1<<state;
-			else
-				row_data = 0x3FFFFFFF * (row == state-29);
-			*/
-
-			for(row_data |= 0x80000000; row_data; row_data>>=1){
-				DATA_OUT(row_data&1);
-				CLOCK_SLEEP();
-				SHIFT_CLOCK(1);
-				CLOCK_SLEEP();
-				SHIFT_CLOCK(0);
-			}
+		for(uint8_t i=0; i<FB_WIDTH; i++){
+			DATA_OUT(frame_buffer[i]&row_mask);
+			CLOCK_SLEEP();
+			SHIFT_CLOCK(1);
+			CLOCK_SLEEP();
+			SHIFT_CLOCK(0);
 		}
 
 		INV_OUTPUT_ENABLE(1);
@@ -107,7 +85,10 @@ int main(void) {
 		STROBE_CLOCK(0);
 		INV_OUTPUT_ENABLE(0);
 		row++;
-		if(row == 8)
+		row_mask <<= 1;
+		if(row == 8){
 			row = 1;
+			row_mask = 1;
+		}
 	}
 }
