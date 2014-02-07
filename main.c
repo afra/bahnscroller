@@ -6,11 +6,12 @@
 #include "uart.h"
 #include "main.h"
 
-char *str = "AFRAAFRAAFRAAFRAAFRAAFRA";
-#define RBLEN	24
+#define RBLEN	255
+char __str[RBLEN];
 char __rbuf[RBLEN];
+char *str = __str;
 char *rbuf = __rbuf;
-uint8_t bindex = 0;
+uint16_t bindex = 0;
 
 void uart_handle(char c){
 	if(bindex < RBLEN)
@@ -26,6 +27,20 @@ void uart_handle(char c){
 int main(void) {
 
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(UART_BAUDRATE, F_CPU));
+	for(uint16_t i=0; i<RBLEN; i++){
+		switch(i&3){
+			case 0:
+			case 3:
+				str[i] = 'A';
+				break;
+			case 1:
+				str[i] = 'F';
+				break;
+			case 2:
+				str[i] = 'R';
+				break;
+		}
+	}
 
 	/* Display IOs */
 	DDRD |= 0xFC;
@@ -58,28 +73,11 @@ int main(void) {
 #define FB_WIDTH		(MODULE_COUNT*ROW_WIDTH)
 	uint8_t frame_buffer[FB_WIDTH]; /* Addressed row first */
 
-	/* Render text to frame buffer */
-	uint8_t offset = 0;
-	for(char *c=str; c && offset<FB_WIDTH; c++){
-		for(uint8_t x=0; x<5 && offset+x<FB_WIDTH; x++){
-			uint8_t k = *c - 0x20;
-			if(k > 96)
-				k = 0;
-			frame_buffer[offset+x] = pgm_read_byte((uint8_t*)(font+k) + x);
-		}
-		/* Inter-character space */
-		frame_buffer[offset+5] = 0;
-		offset += 6;
-	}
-	/* Fill the rest of the frame buffer with zeros */
-	for(; offset<FB_WIDTH; offset++){
-		frame_buffer[offset] = 0;
-	}
-
+	uint8_t cycle = 0;
+	int16_t offset = 0;
 	uint8_t row = 1;
 	uint8_t row_mask = 1;
 	while(1){
-
 		/* Reset shift registers for good measure */
 		INV_MASTER_RESET(0);
 		CLOCK_SLEEP();
@@ -122,6 +120,35 @@ int main(void) {
 		if(row == 8){
 			row = 1;
 			row_mask = 1;
+
+			/* Render text to frame buffer */
+			uint8_t i = offset%6;
+			int8_t j = offset/6;
+			for(uint8_t x=0; x<FB_WIDTH; x++){
+				if(i == 5){
+					frame_buffer[x] = 0;
+					i = 0;
+					j++;
+				}else{
+					uint8_t k = 0;
+					if(j >= 0 && j < RBLEN){
+						k = str[j] - 0x20;
+						if(k > 96)
+							k = 0;
+					}
+					frame_buffer[x] = pgm_read_byte((uint8_t*)(font+k) + i);
+					i++;
+				}
+			}
+
+			cycle++;
+			if(cycle == 30){
+				cycle=0;
+				offset++;
+				if(offset > RBLEN*6){
+					offset = 0;
+				}
+			}
 		}
 	}
 }
