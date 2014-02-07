@@ -141,18 +141,14 @@ int main(void) {
 			row_mask = 1;
 
 			/* Render text to frame buffer */
-			uint8_t i = 0; //offset%6;
-			int16_t j = 0; //offset/6;
-			str[0] = 'O';
-			str[1] = tohex(offset>>12);
-			str[2] = tohex((offset>>8)&0xF);
-			str[3] = tohex((offset>>4)&0xF);
-			str[4] = tohex(offset&0xF);
-			str[5] = 'S';
-			str[6] = tohex(stlen>>12);
-			str[7] = tohex((stlen>>8)&0xF);
-			str[8] = tohex((stlen>>4)&0xF);
-			str[9] = tohex(stlen&0xF);
+			int8_t i = offset%6;
+			if(i<0)
+				i += 6;
+			int16_t j;
+			if(offset < 0)
+				j = (offset+1)/6-1;
+			else
+				j = offset/6;
 			for(uint8_t x=0; x<FB_WIDTH; x++){
 				if(i == 5){
 					frame_buffer[x] = 0;
