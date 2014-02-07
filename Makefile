@@ -1,6 +1,7 @@
 
 PROGRAMMER=arduino
 PROGRAMMER_BAUDRATE=115200
+UART_BAUDRATE=115200
 CLOCK=16000000
 MCU=atmega328p
 PORT=/dev/ttyACM0
@@ -8,8 +9,8 @@ PORT=/dev/ttyACM0
 all: objects
 
 
-objects: main.c font.c
-	avr-gcc -Wall -fshort-enums -fno-inline-small-functions -fpack-struct -Wall -fno-strict-aliasing -funsigned-char -funsigned-bitfields -ffunction-sections -mmcu=${MCU} -DF_CPU=${CLOCK} -std=gnu99 -Os -o main.elf -Wl,--gc-sections,--relax -I . -I../common $^
+objects: main.c font.c uart.c
+	avr-gcc -Wall -fshort-enums -fno-inline-small-functions -fpack-struct -Wall -fno-strict-aliasing -funsigned-char -funsigned-bitfields -ffunction-sections -mmcu=${MCU} -DF_CPU=${CLOCK} -DUART_BAUDRATE=${UART_BAUDRATE} -std=gnu99 -Os -o main.elf -Wl,--gc-sections,--relax -I . -I../common $^
 	avr-objcopy -O ihex main.elf main.hex
 	avr-size main.elf
 

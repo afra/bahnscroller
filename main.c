@@ -3,9 +3,31 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "font.h"
+#include "uart.h"
+#include "main.h"
+
+char *str = "AFRAAFRAAFRAAFRAAFRAAFRA";
+#define RBLEN	24
+char __rbuf[RBLEN];
+char *rbuf = __rbuf;
+uint8_t bindex = 0;
+
+void uart_handle(char c){
+	if(bindex < RBLEN)
+		rbuf[bindex++] = c;
+	if(c == '\0' || c == '\n'){
+		char *tmp = str;
+		str = rbuf;
+		rbuf = tmp;
+		bindex = 0;
+	}
+}
 
 int main(void) {
 
+    uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(UART_BAUDRATE, F_CPU));
+
+	/* Display IOs */
 	DDRD |= 0xFC;
 	DDRB |= 0x03;
 
@@ -36,7 +58,6 @@ int main(void) {
 #define FB_WIDTH		(MODULE_COUNT*ROW_WIDTH)
 	uint8_t frame_buffer[FB_WIDTH]; /* Addressed row first */
 
-	char *str = "AFRAAFRAAFRAAFRAAFRAAFRA";
 	/* Render text to frame buffer */
 	uint8_t offset = 0;
 	for(char *c=str; c && offset<FB_WIDTH; c++){
