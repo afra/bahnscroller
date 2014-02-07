@@ -15,27 +15,11 @@ volatile char *str = __str;
 volatile char *rbuf = __rbuf;
 uint16_t bindex = 0;
 
-char tohex(uint8_t n){
-	if(n<10)
-		return '0'+n;
-	else
-		return 'A'-10+n;
-}
-
-void puthex(uint8_t d){
-	uart_putc(tohex(d>>4));
-	uart_putc(tohex(d&0xF));
-}
-
 void uart_handle(char c){
 	uart_putc(c);
 	if(bindex < RBLEN)
 		rbuf[bindex++] = c;
 	if(c == '\0' || c == '\n' || c == '\r'){
-		uart_putc('\n');
-		puthex(bindex);
-		uart_putc('O');
-		uart_putc('K');
 		uart_putc('\n');
 		stlen = bindex;
 		for(uint16_t i=bindex; i<RBLEN; i++)
