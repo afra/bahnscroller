@@ -87,8 +87,20 @@ int main(void) {
 		CLOCK_SLEEP();
 
 		/* shift out row data */
-		for(uint8_t i=0; i<FB_WIDTH; i++){
-			DATA_OUT(frame_buffer[i]&row_mask);
+		for(uint8_t module=0; module<MODULE_COUNT; module++){
+			for(uint8_t i=0; i<ROW_WIDTH; i++){
+				DATA_OUT(frame_buffer[i]&row_mask);
+				CLOCK_SLEEP();
+				SHIFT_CLOCK(1);
+				CLOCK_SLEEP();
+				SHIFT_CLOCK(0);
+			}
+			/* Shift out two dummy bits */
+			DATA_OUT(0);
+			CLOCK_SLEEP();
+			SHIFT_CLOCK(1);
+			CLOCK_SLEEP();
+			SHIFT_CLOCK(0);
 			CLOCK_SLEEP();
 			SHIFT_CLOCK(1);
 			CLOCK_SLEEP();
