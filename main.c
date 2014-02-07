@@ -1,23 +1,46 @@
 /* Copyright © 2014 jaseg; Released under GPLv3 */
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <util/delay.h>
 #include "font.h"
 #include "uart.h"
 #include "main.h"
 
 #define RBLEN	255
+volatile uint16_t stlen = RBLEN;
 char __str[RBLEN];
 char __rbuf[RBLEN];
-char *str = __str;
-char *rbuf = __rbuf;
+volatile char *str = __str;
+volatile char *rbuf = __rbuf;
 uint16_t bindex = 0;
 
+char tohex(uint8_t n){
+	if(n<10)
+		return '0'+n;
+	else
+		return 'A'-10+n;
+}
+
+void puthex(uint8_t d){
+	uart_putc(tohex(d>>4));
+	uart_putc(tohex(d&0xF));
+}
+
 void uart_handle(char c){
+	uart_putc(c);
 	if(bindex < RBLEN)
 		rbuf[bindex++] = c;
-	if(c == '\0' || c == '\n'){
-		char *tmp = str;
+	if(c == '\0' || c == '\n' || c == '\r'){
+		uart_putc('\n');
+		puthex(bindex);
+		uart_putc('O');
+		uart_putc('K');
+		uart_putc('\n');
+		stlen = bindex;
+		for(uint16_t i=bindex; i<RBLEN; i++)
+			rbuf[i] = 0;
+		volatile char *tmp = str;
 		str = rbuf;
 		rbuf = tmp;
 		bindex = 0;
@@ -28,18 +51,11 @@ int main(void) {
 
     uart_init(UART_BAUD_SELECT_DOUBLE_SPEED(UART_BAUDRATE, F_CPU));
 	for(uint16_t i=0; i<RBLEN; i++){
-		switch(i&3){
-			case 0:
-			case 3:
-				str[i] = 'A';
-				break;
-			case 1:
-				str[i] = 'F';
-				break;
-			case 2:
-				str[i] = 'R';
-				break;
-		}
+		uint8_t j = i%36;
+		if(j<10)
+			str[i] = '0'+j;
+		else
+			str[i] = 'A'+j-10;
 	}
 
 	/* Display IOs */
@@ -77,6 +93,8 @@ int main(void) {
 	int16_t offset = 0;
 	uint8_t row = 1;
 	uint8_t row_mask = 1;
+
+	sei();
 	while(1){
 		/* Reset shift registers for good measure */
 		INV_MASTER_RESET(0);
@@ -86,8 +104,9 @@ int main(void) {
 
 		/* shift out row data */
 		for(uint8_t module=0; module<MODULE_COUNT; module++){
+			uint8_t m_off = module*ROW_WIDTH;
 			for(uint8_t i=0; i<ROW_WIDTH; i++){
-				DATA_OUT(frame_buffer[i]&row_mask);
+				DATA_OUT(frame_buffer[m_off+i]&row_mask);
 				CLOCK_SLEEP();
 				SHIFT_CLOCK(1);
 				CLOCK_SLEEP();
@@ -122,8 +141,18 @@ int main(void) {
 			row_mask = 1;
 
 			/* Render text to frame buffer */
-			uint8_t i = offset%6;
-			int8_t j = offset/6;
+			uint8_t i = 0; //offset%6;
+			int16_t j = 0; //offset/6;
+			str[0] = 'O';
+			str[1] = tohex(offset>>12);
+			str[2] = tohex((offset>>8)&0xF);
+			str[3] = tohex((offset>>4)&0xF);
+			str[4] = tohex(offset&0xF);
+			str[5] = 'S';
+			str[6] = tohex(stlen>>12);
+			str[7] = tohex((stlen>>8)&0xF);
+			str[8] = tohex((stlen>>4)&0xF);
+			str[9] = tohex(stlen&0xF);
 			for(uint8_t x=0; x<FB_WIDTH; x++){
 				if(i == 5){
 					frame_buffer[x] = 0;
@@ -142,11 +171,11 @@ int main(void) {
 			}
 
 			cycle++;
-			if(cycle == 30){
+			if(cycle == 10){
 				cycle=0;
 				offset++;
-				if(offset > RBLEN*6){
-					offset = 0;
+				if(offset > (int16_t)stlen*6){
+					offset = -FB_WIDTH;
 				}
 			}
 		}
