@@ -7,7 +7,7 @@
 #include "uart.h"
 #include "main.h"
 
-#define RBLEN	255
+#define RBLEN	512
 volatile uint16_t stlen = RBLEN;
 char __str[RBLEN];
 char __rbuf[RBLEN];
