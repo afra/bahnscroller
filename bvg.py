@@ -18,7 +18,17 @@ ser = serial.Serial(PORT, 115200, timeout=0)
 time.sleep(3)
 while True:
     line = ' | '.join(departures())
+    for a, b in (
+            ('ä', 'ae'),
+            ('Ä', 'AE'),
+            ('ö', 'oe'),
+            ('Ö', 'OE'),
+            ('ü', 'ue'),
+            ('Ü', 'UE'),
+            ('ß', 'ss'),
+            ):
+        line = line.replace(a, b)
     print(line)
-    ser.write((line+'\r').encode('ASCII'))
+    ser.write((line+'\r').encode('utf8'))
     time.sleep(300)
     

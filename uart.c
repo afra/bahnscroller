@@ -224,7 +224,8 @@ ISR(UART0_RECEIVE_INTERRUPT)
 #endif
     */
         
-    uart_handle(data);
+    if (!(UCSR0A & (_BV(FE0) | _BV(DOR0))))
+        uart_handle(data);
 }
 
 
